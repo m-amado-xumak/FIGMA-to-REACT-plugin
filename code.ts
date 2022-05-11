@@ -11,22 +11,55 @@ figma.showUI(__html__);
 // Calls to "parent.postMessage" from within the HTML page will trigger this
 // callback. The callback will be passed the "pluginMessage" property of the
 // posted message.
-figma.ui.onmessage = msg => {
+figma.ui.onmessage = (msg) => {
   // One way of distinguishing between different types of messages sent from
   // your HTML page is to use an object with a "type" property like this.
-  if (msg.type === 'create-rectangles') {
+  const convertUnit = (unit: string) => {
+    if (unit === 'PIXELS') return 'px';
+    if (unit === 'PERCENT') return '%';
+    return '';
+  };
 
-  console.log(figma.currentPage.selection);
-    const nodes: SceneNode[] = [];
-    for (let i = 0; i < msg.count; i++) {
-      const rect = figma.createRectangle();
-      rect.x = i * 150;
-      rect.fills = [{type: 'SOLID', color: {r: 1, g: 0.5, b: 0}}];
-      figma.currentPage.appendChild(rect);
-      nodes.push(rect);
-    }
-    figma.currentPage.selection = nodes;
-    figma.viewport.scrollAndZoomIntoView(nodes);
+  const textTransform = (textCase: string) => {
+    if (textCase === 'UPPER') return 'uppercase';
+    if (textCase === 'LOWER') return 'lowercase';
+    if (textCase === 'TITLE') return 'capitalize';
+    return 'none';
+  };
+
+  const textDecoration = (textDecoration: string) => {
+    if (textDecoration === 'underline') return 'underline';
+    if (textDecoration === 'strikethrough') return 'line-through';
+    return 'none';
+  };
+
+  if (msg.type === 'create-rectangles') {
+    const textStyles = figma.getLocalTextStyles();
+    console.log(textStyles);
+    let cssClasses: string = '';
+    textStyles.forEach((textStyle) => {
+      let line = textStyle.lineHeight as {
+        readonly value: number;
+        readonly unit: 'PIXELS' | 'PERCENT';
+      };
+      cssClasses += `.${textStyle.name} {
+        font-family: ${textStyle.fontName.family};
+        font-style: ${textStyle.fontName.style};
+        font-size: ${textStyle.fontSize}px;
+        text-decoration-line: ${textDecoration(
+          textStyle.textDecoration.toLowerCase()
+        )};
+        text-transform: ${textTransform(textStyle.textCase)};
+        line-height: ${line.value ? line.value : 'normal'}${convertUnit(
+        line.unit
+      )};
+        letter-spacing: ${textStyle.letterSpacing.value}${convertUnit(
+        textStyle.letterSpacing.unit
+      )};
+        text-indent: ${textStyle.paragraphIndent}px;
+    }`;
+    });
+    console.log(cssClasses);
   }
 
   // Make sure to close the plugin when you're done. Otherwise the plugin will
