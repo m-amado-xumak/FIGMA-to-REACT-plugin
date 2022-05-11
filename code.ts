@@ -1,34 +1,42 @@
-// This plugin will open a window to prompt the user to enter a number, and
-// it will then create that many rectangles on the screen.
 
-// This file holds the main code for the plugins. It has access to the *document*.
-// You can access browser APIs in the <script> tag inside "ui.html" which has a
-// full browser environment (see documentation).
+/**
+ * 
+ * @param c - An integer between 0 and 255
+ * @returns - Hex value
+ */
+ const componentToHex = (c) => {
+  var hex = c.toString(16);
+  return hex.length == 1 ? "0" + hex : hex;
+}
 
-// This shows the HTML page in "ui.html".
 figma.showUI(__html__);
 
-// Calls to "parent.postMessage" from within the HTML page will trigger this
-// callback. The callback will be passed the "pluginMessage" property of the
-// posted message.
+// Default application function
 figma.ui.onmessage = msg => {
-  // One way of distinguishing between different types of messages sent from
-  // your HTML page is to use an object with a "type" property like this.
   if (msg.type === 'create-rectangles') {
-
-  console.log(figma.currentPage.selection);
-    const nodes: SceneNode[] = [];
-    for (let i = 0; i < msg.count; i++) {
-      const rect = figma.createRectangle();
-      rect.x = i * 150;
-      rect.fills = [{type: 'SOLID', color: {r: 1, g: 0.5, b: 0}}];
-      figma.currentPage.appendChild(rect);
-      nodes.push(rect);
-    }
-    figma.currentPage.selection = nodes;
-    figma.viewport.scrollAndZoomIntoView(nodes);
+    // Get all the color styles
+    let colors = figma.getLocalPaintStyles();
+    /**
+     * Create a new Array with the css variable names and its corresponding hex values
+     * 
+     * @param col:PaintStyle - A PaintStyle color
+     * @constant name - The name defined in FIGMA. It's converted to lowercase, and all spaces are replaced with a dash '-'
+     * @constant paint - The color itself as Paint
+     * @constant localPaint - A conversion to SolidPaint to access the color values
+     * @constant color - The RGB array that contains the color
+     * @returns - A variable with this format: '--name: #00000000'. A hex color in a css variable with opacity
+     * 
+     */
+    const cssColors = colors.map((col: PaintStyle) => {
+      const name = col.name.toLowerCase().replace(" ", "-");
+      const paint: Paint = col.paints[0];
+      const localPaint: SolidPaint = paint as SolidPaint;
+      const color = localPaint.color;
+      return (
+        "--" + name + ": #" + componentToHex(Math.round(color.r * 255.0)) + componentToHex(Math.round(color.g * 255.0)) + componentToHex(Math.round(color.b * 255.0)) + componentToHex(Math.round(paint.opacity * 255.0))
+      );
+    })
+    console.log(cssColors);
   }
 
-  // Make sure to close the plugin when you're done. Otherwise the plugin will
-  // keep running, which shows the cancel button at the bottom of the screen.
 };
